@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f1117" />
+  <title>Daily Newsstand</title>
+  <meta name="description" content="개인용 모바일 뉴스스탠드 - 매일 핵심 뉴스를 한눈에" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Pretendard', 'Inter', 'sans-serif'] },
+          colors: {
+            surface:   '#0f1117',
+            card:      '#1a1d27',
+            cardHover: '#22263a',
+            accent:    '#6c5ce7',
+            accentL:   '#a29bfe',
+            mint:      '#00cec9',
+            coral:     '#fd79a8',
+            gold:      '#fdcb6e',
+            textPri:   '#f0f0f5',
+            textSec:   '#9ca3af',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', 'Inter', sans-serif;
+      background: #0f1117;
+      color: #f0f0f5;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+    /* Date input styling */
+    input[type="date"] {
+      color-scheme: dark;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+    }
+
+    /* Slide transitions */
+    .view-enter { animation: slideIn 0.3s ease-out forwards; }
+    .view-exit  { animation: slideOut 0.2s ease-in forwards; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-30px); } }
+
+    /* Card hover glow */
+    .news-card { transition: all 0.2s ease; }
+    .news-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 0 20px rgba(108,92,231,.15);
+    }
+
+    /* Sub-tab pill */
+    .sub-tab {
+      transition: all 0.2s ease;
+    }
+    .sub-tab.active {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(108,92,231,.4);
+    }
+
+    /* Skeleton loader */
+    .skeleton {
+      background: linear-gradient(90deg, #1a1d27 25%, #22263a 50%, #1a1d27 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Category accent colors */
+    .cat-사회       { border-left: 3px solid #fd79a8; }
+    .cat-경영경제   { border-left: 3px solid #fdcb6e; }
+    .cat-인사노무   { border-left: 3px solid #6c5ce7; }
+    .cat-글로벌     { border-left: 3px solid #00cec9; }
+
+    .cat-dot-사회       { background: #fd79a8; }
+    .cat-dot-경영경제   { background: #fdcb6e; }
+    .cat-dot-인사노무   { background: #6c5ce7; }
+    .cat-dot-글로벌     { background: #00cec9; }
+
+    .cat-badge-사회     { background: rgba(253,121,168,.15); color: #fd79a8; }
+    .cat-badge-경영경제 { background: rgba(253,203,110,.15); color: #fdcb6e; }
+    .cat-badge-인사노무 { background: rgba(108,92,231,.15);  color: #a29bfe; }
+    .cat-badge-글로벌   { background: rgba(0,206,201,.15);   color: #00cec9; }
+  </style>
+</head>
+<body>
+  <div id="app" class="max-w-[430px] mx-auto min-h-dvh relative">
+
+    <!-- ═══════ HEADER ═══════ -->
+    <header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-lg border-b border-white/5 px-4 py-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button id="btn-back" class="hidden p-2.5 rounded-xl hover:bg-white/10 transition" onclick="showMain()">
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          </button>
+          <h1 id="header-title" class="text-lg font-bold tracking-tight">
+            <span class="text-accentL">Daily</span> Newsstand
+          </h1>
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            id="date-picker"
+            type="date"
+            class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-textSec focus:outline-none focus:border-accent/50 w-[140px]"
+          />
+          <button
+            onclick="triggerCollect()"
+            class="p-2.5 rounded-xl hover:bg-white/10 transition"
+            title="Refresh news"
+          >
+            <i data-lucide="refresh-cw" class="w-5 h-5 text-textSec" id="refresh-icon"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ═══════ MAIN VIEW ═══════ -->
+    <main id="main-view" class="px-4 pb-20">
+      <!-- Date display -->
+      <div class="pt-4 pb-3">
+        <p class="text-sm text-textSec" id="date-label">Loading...</p>
+        <p class="text-xs text-textSec/60 mt-0.5" id="article-count"></p>
+      </div>
+
+      <!-- Category sections -->
+      <div id="categories-container" class="space-y-6">
+        <!-- Populated by JS -->
+      </div>
+    </main>
+
+    <!-- ═══════ DETAIL VIEW ═══════ -->
+    <main id="detail-view" class="hidden px-4 pb-20">
+      <!-- Sub-tabs (인사노무 only) -->
+      <div id="sub-tabs" class="hidden pt-4 pb-2 flex gap-2 overflow-x-auto no-scrollbar">
+        <button class="sub-tab active whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium bg-white/5 text-textSec"
+                onclick="switchSubTab(null)">전체</button>
+        <button class="sub-tab whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium bg-white/5 text-textSec"
+                onclick="switchSubTab('핫이슈')">핫이슈</button>
+        <button class="sub-tab whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium bg-white/5 text-textSec"
+                onclick="switchSubTab('법령/근로기준법')">법령/근로기준법</button>
+        <button class="sub-tab whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium bg-white/5 text-textSec"
+                onclick="switchSubTab('법령개정/판례')">법령개정/판례</button>
+      </div>
+
+      <!-- Article list -->
+      <div id="detail-list" class="space-y-3 pt-4">
+        <!-- Populated by JS -->
+      </div>
+    </main>
+
+    <!-- ═══════ BOTTOM NAV ═══════ -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface/90 backdrop-blur-lg border-t border-white/5 px-2 py-2 z-50">
+      <div class="flex justify-around">
+        <button onclick="quickNav('사회')" class="flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-white/5 transition">
+          <span class="w-2.5 h-2.5 rounded-full cat-dot-사회"></span>
+          <span class="text-[11px] font-medium text-textSec">사회</span>
+        </button>
+        <button onclick="quickNav('경영경제')" class="flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-white/5 transition">
+          <span class="w-2.5 h-2.5 rounded-full cat-dot-경영경제"></span>
+          <span class="text-[11px] font-medium text-textSec">경영경제</span>
+        </button>
+        <button onclick="quickNav('인사노무')" class="flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-white/5 transition">
+          <span class="w-2.5 h-2.5 rounded-full cat-dot-인사노무"></span>
+          <span class="text-[11px] font-medium text-textSec">인사노무</span>
+        </button>
+        <button onclick="quickNav('글로벌')" class="flex flex-col items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-white/5 transition">
+          <span class="w-2.5 h-2.5 rounded-full cat-dot-글로벌"></span>
+          <span class="text-[11px] font-medium text-textSec">글로벌</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    // ── State ───────────────────────────────────────────────
+    let currentDate = new Date().toISOString().slice(0, 10);
+    let currentCategory = null;
+    let currentSubTab = null;
+
+    const $  = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    // ── Init ────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const picker = $('#date-picker');
+      picker.value = currentDate;
+      picker.addEventListener('change', (e) => {
+        currentDate = e.target.value;
+        if (currentCategory) {
+          loadDetail(currentCategory);
+        } else {
+          loadMain();
+        }
+      });
+      loadMain();
+      lucide.createIcons();
+      
+      // Register Service Worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('Service Worker registered', reg))
+            .catch(err => console.error('Service Worker registration failed:', err));
+        });
+      }
+    });
+
+    // ── Load main dashboard ─────────────────────────────────
+    async function loadMain() {
+      currentCategory = null;
+      currentSubTab = null;
+      showMainView();
+      showSkeletonMain();
+
+      try {
+        const resp = await fetch(`/api/news?date=${currentDate}`);
+        const data = await resp.json();
+        renderMain(data);
+      } catch (e) {
+        console.error('Failed to load news:', e);
+        $('#categories-container').innerHTML =
+          '<p class="text-center text-textSec py-10">Failed to load news data.</p>';
+      }
+    }
+
+    function renderMain(data) {
+      const cats = ['사회', '경영경제', '인사노무', '글로벌'];
+      const container = $('#categories-container');
+      const d = new Date(data.date + 'T00:00:00');
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+      $('#date-label').textContent =
+        `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${dayNames[d.getDay()]})`;
+
+      let totalCount = 0;
+      let html = '';
+
+      cats.forEach(cat => {
+        const articles = data.categories[cat] || [];
+        totalCount += articles.length;
+
+        html += `
+          <section>
+            <button class="w-full flex items-center justify-between py-2 group" onclick="openCategory('${cat}')">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full cat-dot-${cat}"></span>
+                <h2 class="font-semibold text-[15px]">${cat}</h2>
+                <span class="cat-badge-${cat} text-[11px] font-medium px-2 py-0.5 rounded-full">${articles.length}</span>
+              </div>
+              <i data-lucide="chevron-right" class="w-4 h-4 text-textSec group-hover:text-white transition"></i>
+            </button>
+            <div class="space-y-2">
+        `;
+
+        if (articles.length === 0) {
+          html += `<p class="text-sm text-textSec/50 pl-5 py-3">No articles available</p>`;
+        } else {
+          articles.forEach(a => {
+            const timeStr = a.pub_date ? formatTime(a.pub_date) : '';
+            html += `
+              <a href="${a.link}" target="_blank" rel="noopener"
+                 class="news-card block bg-card rounded-2xl p-4 sm:p-5 cat-${cat} hover:bg-cardHover mb-2.5">
+                <p class="text-[13px] font-medium leading-snug line-clamp-2">${escHtml(a.title)}</p>
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="text-[11px] text-textSec/60">${a.source}</span>
+                  ${timeStr ? `<span class="text-[11px] text-textSec/40">${timeStr}</span>` : ''}
+                </div>
+              </a>
+            `;
+          });
+        }
+
+        html += `</div></section>`;
+      });
+
+      container.innerHTML = html;
+      $('#article-count').textContent = `${totalCount} articles collected`;
+      lucide.createIcons();
+    }
+
+    // ── Load category detail ────────────────────────────────
+    async function openCategory(cat) {
+      currentCategory = cat;
+      currentSubTab = null;
+      loadDetail(cat);
+    }
+
+    async function loadDetail(cat) {
+      showDetailView(cat);
+      showSkeletonDetail();
+
+      // Show sub-tabs only for 인사노무
+      if (cat === '인사노무') {
+        $('#sub-tabs').classList.remove('hidden');
+        resetSubTabs();
+      } else {
+        $('#sub-tabs').classList.add('hidden');
+      }
+
+      let url = `/api/news/${encodeURIComponent(cat)}?date=${currentDate}`;
+      if (currentSubTab) {
+        url += `&sub_category=${encodeURIComponent(currentSubTab)}`;
+      }
+
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        renderDetail(data);
+      } catch (e) {
+        console.error('Failed to load category:', e);
+        $('#detail-list').innerHTML =
+          '<p class="text-center text-textSec py-10">Failed to load articles.</p>';
+      }
+    }
+
+    function renderDetail(data) {
+      const container = $('#detail-list');
+      const articles = data.articles || [];
+
+      if (articles.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-16">
+            <i data-lucide="inbox" class="w-10 h-10 text-textSec/30 mx-auto mb-3"></i>
+            <p class="text-sm text-textSec/50">No articles found for this date</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      let html = '';
+      articles.forEach((a, i) => {
+        const timeStr = a.pub_date ? formatTime(a.pub_date) : '';
+        const cat = data.category;
+        html += `
+          <a href="${a.link}" target="_blank" rel="noopener"
+             class="news-card block bg-card rounded-2xl p-4 sm:p-5 cat-${cat} hover:bg-cardHover mb-2.5"
+             style="animation-delay: ${i * 40}ms">
+            <div class="flex items-start gap-3">
+              <span class="text-accentL/40 text-sm font-bold mt-0.5 shrink-0">${String(i+1).padStart(2, '0')}</span>
+              <div class="flex-1 min-w-0">
+                <p class="text-[13px] font-medium leading-snug line-clamp-2">${escHtml(a.title)}</p>
+                ${a.description ? `<p class="text-[12px] text-textSec/60 mt-1.5 line-clamp-2 leading-relaxed">${escHtml(a.description)}</p>` : ''}
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="text-[11px] text-textSec/60">${a.source}</span>
+                  ${a.sub_category ? `<span class="cat-badge-인사노무 text-[10px] px-1.5 py-0.5 rounded-full">${a.sub_category}</span>` : ''}
+                  ${timeStr ? `<span class="text-[11px] text-textSec/40">${timeStr}</span>` : ''}
+                </div>
+              </div>
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-textSec/30 shrink-0 mt-1"></i>
+            </div>
+          </a>
+        `;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // ── Sub-tab handling (인사노무) ──────────────────────────
+    function switchSubTab(sub) {
+      currentSubTab = sub;
+      resetSubTabs();
+
+      // Highlight the active tab
+      $$('#sub-tabs .sub-tab').forEach(btn => {
+        const val = btn.getAttribute('onclick').match(/'([^']*)'/)?.[1] || null;
+        const btnSub = val === 'null' ? null : val;
+        if (btnSub === sub) {
+          btn.classList.add('active');
+        }
+      });
+
+      loadDetail(currentCategory);
+    }
+
+    function resetSubTabs() {
+      $$('#sub-tabs .sub-tab').forEach(btn => btn.classList.remove('active'));
+      // Default: first tab (전체) active if no sub selected
+      if (currentSubTab === null) {
+        $('#sub-tabs .sub-tab').classList.add('active');
+      }
+    }
+
+    // ── View switching ──────────────────────────────────────
+    function showMainView() {
+      $('#main-view').classList.remove('hidden');
+      $('#detail-view').classList.add('hidden');
+      $('#btn-back').classList.add('hidden');
+      $('#header-title').innerHTML = '<span class="text-accentL">Daily</span> Newsstand';
+    }
+
+    function showDetailView(cat) {
+      $('#main-view').classList.add('hidden');
+      $('#detail-view').classList.remove('hidden');
+      $('#detail-view').classList.add('view-enter');
+      $('#btn-back').classList.remove('hidden');
+      $('#header-title').textContent = cat;
+    }
+
+    function showMain() {
+      loadMain();
+    }
+
+    function quickNav(cat) {
+      openCategory(cat);
+    }
+
+    // ── Manual collect ──────────────────────────────────────
+    async function triggerCollect() {
+      const icon = $('#refresh-icon');
+      icon.style.animation = 'spin 1s linear infinite';
+
+      try {
+        const resp = await fetch('/api/collect', { method: 'POST' });
+        const data = await resp.json();
+        console.log('Collection result:', data);
+
+        // Reload current view
+        if (currentCategory) {
+          loadDetail(currentCategory);
+        } else {
+          loadMain();
+        }
+      } catch (e) {
+        console.error('Collection failed:', e);
+      } finally {
+        icon.style.animation = '';
+      }
+    }
+
+    // ── Skeleton loaders ────────────────────────────────────
+    function showSkeletonMain() {
+      const cats = ['사회', '경영경제', '인사노무', '글로벌'];
+      let html = '';
+      cats.forEach(cat => {
+        html += `
+          <section>
+            <div class="flex items-center gap-2 py-2">
+              <span class="w-2.5 h-2.5 rounded-full cat-dot-${cat}"></span>
+              <h2 class="font-semibold text-[15px]">${cat}</h2>
+            </div>
+            <div class="space-y-2">
+              ${[1,2,3].map(() => `
+                <div class="bg-card rounded-2xl p-4 sm:p-5 mb-2.5 cat-${cat}">
+                  <div class="skeleton h-4 w-4/5 mb-2"></div>
+                  <div class="skeleton h-3 w-2/5"></div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      });
+      $('#categories-container').innerHTML = html;
+    }
+
+    function showSkeletonDetail() {
+      let html = '';
+      for (let i = 0; i < 5; i++) {
+        html += `
+          <div class="bg-card rounded-2xl p-4 sm:p-5 mb-2.5">
+            <div class="flex items-start gap-3">
+              <div class="skeleton w-6 h-4 shrink-0"></div>
+              <div class="flex-1">
+                <div class="skeleton h-4 w-full mb-2"></div>
+                <div class="skeleton h-3 w-3/4 mb-2"></div>
+                <div class="skeleton h-3 w-1/3"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      $('#detail-list').innerHTML = html;
+    }
+
+    // ── Helpers ──────────────────────────────────────────────
+    function formatTime(dateStr) {
+      try {
+        const d = new Date(dateStr);
+        const h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const period = h < 12 ? 'AM' : 'PM';
+        const h12 = h % 12 || 12;
+        return `${h12}:${m} ${period}`;
+      } catch {
+        return '';
+      }
+    }
+
+    function escHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  </style>
+</body>
+</html>
