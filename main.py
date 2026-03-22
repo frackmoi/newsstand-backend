@@ -109,6 +109,11 @@ def get_daily_news(
     if not target:
         return {"date": date, "categories": {cat: [] for cat in VALID_CATEGORIES}}
 
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    if target == today_kst and db.query(Article).filter(Article.fetch_date == target).count() == 0:
+        logger.info("Auto-fetching news for today...")
+        run_collection()
+
     result: dict[str, list] = {}
 
     for cat in VALID_CATEGORIES:
@@ -135,6 +140,11 @@ def get_mobile_news(
     target = _resolve_date(date)
     if not target:
         return []
+
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    if target == today_kst and db.query(Article).filter(Article.fetch_date == target).count() == 0:
+        logger.info("Auto-fetching news for today...")
+        run_collection()
 
     articles = (
         db.query(Article)
@@ -173,6 +183,11 @@ def get_category_news(
     For 인사노무, optionally filter by sub_category.
     """
     target = _resolve_date(date)
+
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    if target == today_kst and db.query(Article).filter(Article.fetch_date == target).count() == 0:
+        logger.info("Auto-fetching news for today...")
+        run_collection()
 
     query = (
         db.query(Article).filter(Article.fetch_date == target, Article.category == category)
