@@ -7,3 +7,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: DATABASE_URL
+        sync: false   # Set this secret in Render Dashboard → Environment
+      - key: NAVER_CLIENT_ID
+        sync: false   # Set this secret in Render Dashboard → Environment
+      - key: NAVER_CLIENT_SECRET
+        sync: false   # Set this secret in Render Dashboard → Environment
