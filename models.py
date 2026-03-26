@@ -1,7 +1,7 @@
 """
 SQLAlchemy ORM model for the articles table.
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Index, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Index
 from database import Base
 
 
@@ -22,8 +22,8 @@ class Article(Base):
 
     # ── Content ────────────────────────────────────────
     title = Column(String(300), nullable=False)
-    # String(500) instead of Text so PostgreSQL can enforce UNIQUE constraint
-    link = Column(String(500), nullable=False, unique=True)
+    # TEXT type supports unlimited URL length; UNIQUE enforced via MD5 index in DB
+    link = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
 
     # ── Dates ──────────────────────────────────────────
@@ -36,10 +36,10 @@ class Article(Base):
     # ── Source ─────────────────────────────────────────
     source = Column(String(20), nullable=False, comment="naver | google")
 
-    # ── Composite index + UNIQUE constraint ─────────────
+    # ── Composite index ─────────────────────────────────
+    # UNIQUE on link is enforced at DB level via: CREATE UNIQUE INDEX ON articles (md5(link))
     __table_args__ = (
         Index("ix_category_fetch", "category", "fetch_date"),
-        UniqueConstraint("link", name="uq_articles_link"),
     )
 
     def __repr__(self):
