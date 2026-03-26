@@ -169,15 +169,6 @@ async def fetch_naver_category(
     )
     return results
 
-    logger.info(
-        "Naver | %s%s | fetched %d items (query: %s)",
-        category,
-        f"/{sub_category}" if sub_category else "",
-        len(results),
-        query,
-    )
-    return results
-
 
 async def fetch_all_naver() -> list[dict]:
     """

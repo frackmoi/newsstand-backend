@@ -1,7 +1,7 @@
 """
 SQLAlchemy ORM model for the articles table.
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Index
+from sqlalchemy import Column, Integer, String, Text, DateTime, Date, Index, UniqueConstraint
 from database import Base
 
 
@@ -22,7 +22,8 @@ class Article(Base):
 
     # ── Content ────────────────────────────────────────
     title = Column(String(300), nullable=False)
-    link = Column(Text, nullable=False)
+    # String(500) instead of Text so PostgreSQL can enforce UNIQUE constraint
+    link = Column(String(500), nullable=False, unique=True)
     description = Column(Text, nullable=True)
 
     # ── Dates ──────────────────────────────────────────
@@ -35,9 +36,10 @@ class Article(Base):
     # ── Source ─────────────────────────────────────────
     source = Column(String(20), nullable=False, comment="naver | google")
 
-    # ── Composite index for common queries ─────────────
+    # ── Composite index + UNIQUE constraint ─────────────
     __table_args__ = (
         Index("ix_category_fetch", "category", "fetch_date"),
+        UniqueConstraint("link", name="uq_articles_link"),
     )
 
     def __repr__(self):
